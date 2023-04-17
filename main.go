@@ -2,13 +2,16 @@ package main
 
 import (
 	"context"
+	"encoding/binary"
 	"flag"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
 )
@@ -50,4 +53,32 @@ func main() {
 	sigCh := make(chan os.Signal)
 	signal.Notify(sigCh, syscall.SIGKILL, syscall.SIGINT)
 	<-sigCh
+}
+
+
+func writeCounter(s network.Stream) {
+	var counter uint64
+
+	for {
+		<- time.After(time.Second)
+		counter ++
+
+		err := binary.Write(s, binary.BigEndian, counter)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func readCounter(s network.Stream) {
+	for {
+		var counter uint64
+
+		err := binary.Read(s, binary.BigEndian, &counter)
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Printf("Received %d from %s\n", counter, s.ID())
+	}
 }
